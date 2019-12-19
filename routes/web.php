@@ -1,6 +1,8 @@
 <?php
 Route::get('/dashboard',  'DashboardController@index')->name('dashboard');
 
+
+Route::get('/login', 'HomeController@index');
 // --------------- //
 // Manage Events  //
 // ------------- //
@@ -41,5 +43,13 @@ Route::get('/create_room', function () {
 Route::get('/room_capacity', function () {
     return view('RoomCapacity');
 });
+
+Route::get('/sign_in', function() {
+    return view('sign_in');
+});
+
+Route::get('/home', 'HomeController@index')->name('home');
+
+Auth::routes();
 
 Route::get('/home', 'HomeController@index')->name('home');

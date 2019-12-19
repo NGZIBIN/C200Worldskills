@@ -23,7 +23,7 @@
 <div id="wrapper">
   <!-- Side bar -->
   @include('layouts.side-navigation')
-  
+
   <div id="content">
   	<nav class="navbar navbar-dark bg-dark">
       <div class="container-fluid">
@@ -31,16 +31,16 @@
           <a class="navbar-brand" href="#">WorldSkills</a>
         </div>
         <ul class="nav navbar-nav navbar-right">
-          <li><a href="#"><span class="glyphicon glyphicon-user"></span> Sign In</a></li>
+          <li><a href=""><span class="glyphicon glyphicon-user"></span> Sign In</a></li>
           <!-- Edit for backend code -->
         </ul>
       </div>
     </nav>
-    
+
     <div id="content-main">
       @yield('content')
     </div>
-       
+
   </div><!-- End of content -->
 </div><!-- End of wrapper -->
 
