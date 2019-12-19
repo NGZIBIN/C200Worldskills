@@ -2,7 +2,7 @@
 Route::get('/dashboard',  'DashboardController@index')->name('dashboard');
 
 
-Route::get('/login', 'HomeController@index');
+Route::get('/login', 'LoginController@Dashboard');
 // --------------- //
 // Manage Events  //
 // ------------- //
