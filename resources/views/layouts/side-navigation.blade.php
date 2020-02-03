@@ -9,8 +9,5 @@
 			<a href="{{ route('event') }}">Manage Events</a>
 		</li>
 
-        <li>
-            <a href="{{ route('attendee.event_register') }}">Attendee event registration</a>
-        </li>
     </ul>
 </nav>

@@ -9,7 +9,7 @@ use App\Organizer;
 use App\Session;
 use App\Channel;
 use App\Room;
-use Validator;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
 class AttendeeController extends Controller
 {
@@ -43,37 +43,53 @@ class AttendeeController extends Controller
         $eventName = $findEventBySlug[0]->event_name;
         $findSessionByEvent = DB::table('sessions')->where('event_id', '=', $findEventBySlug[0]->id)->get();
         $findTicketByEvent = DB::table('tickets')->where('event_id', '=', $findEventBySlug[0]->id)->get();
+        $findTicketsLeftByEvent = DB::table('tickets')->where([['tickets_left', '>', 0],['event_id', '=', $findEventBySlug[0]->id]])->get();
 
-        return view('AttendeeEventRegistration', compact(['slug','eventName','findSessionByEvent','findTicketByEvent']));
+        return view('AttendeeEventRegistration', compact(['slug','eventName','findSessionByEvent','findTicketByEvent','findTicketsLeftByEvent']));
 
     }
     public function update(Request $request, $slug)
     {
+//        $validator = Validator::make($request->all(), [
+//            'ticketCostCB[]'=>'required_without_all'
+//        ]);
+//        if($validator->fails()){
+//            return redirect('attendee/event_register/'.$slug)
+//                ->withErrors($validator)
+//                ->withInput();
+//        }
 
-        $getEventIdBySlug = DB::table('events')->where('event_slug', '=', $slug)->get();
-        $ticket = DB::table('tickets')->select('*')->where('event_id', '=', $getEventIdBySlug[0]->id)->get();
-        $selectedTickets = $request->ticketCostCB;
-        foreach ($selectedTickets as $t) {
-            $ticketLeft = DB::table('tickets')->where('id', '=', (int)$t )->get();
-            $tl= $ticketLeft[0]->tickets_left - 1;
+//            if(count($request->ticketCostCB) === 0){
+//                $result = "Please select a ticket to purchase";
+//                return redirect('/attendee/event_register'.$slug)->with('alertmessage', $result);
+//            }else
+ {
+                 $result = "";
+                $getEventIdBySlug = DB::table('events')->where('event_slug', '=', $slug)->get();
+                $ticket = DB::table('tickets')->select('*')->where('event_id', '=', $getEventIdBySlug[0]->id)->get();
+                $selectedTickets = $request->ticketCostCB;
+                foreach ($selectedTickets as $t) {
+                    $ticketLeft = DB::table('tickets')->where('id', '=', (int)$t)->get();
+                    $tl = $ticketLeft[0]->tickets_left - 1;
+                    DB::table('tickets')->where('id', '=', (int)$t)->update(['tickets_left' => $tl]);
+                }
+                $result = "Purchase success!";
+                return redirect('/attendee/home')->with('alertmessage', $result);
+            }
 
 
 
-            DB::table('tickets')->where('id', '=', (int)$t)->update(['tickets_left' => $tl]);
 
-        }
-        return redirect('/attendee/home');
-//
-//            $result = "";
-//            if ($this->update($slug) === true) {
-//                $result = "Purchase Successful";
-//                return redirect('/attendee/home')->with('alertmessage', $result);
-//            } else {
-//                $result = "Sorry Purchase Fail";
-//                return redirect('attendee/event_register' . $slug)->with('alertmessage', $result);
-//            }
-
+//        if ($this->update($slug) === true) {
+//            $result = "Purchase Successful";
+//            return redirect('/attendee/home')->with('alertmessage', $result);
+//        } else {
+//            $result = "Sorry Purchase Fail";
+//            return redirect('attendee/event_register' . $slug)->with('alertmessage', $result);
+//        }
     }
+
+
 //    public function update(Request $request, $slug)
 //    {
 //
@@ -110,14 +126,21 @@ class AttendeeController extends Controller
     public function eventAgenda($slug)
     {
 
-        $session = \DB::table('sessions')->get();
-        $room = \DB::table('rooms')->get();
-        $channel = \DB::table('channels')->get();
-        $sessionData = $session;
-        $roomData = $room;
-        $channelData = $channel;
-        $event = Event::where('event_slug', '=', $slug)->first();
-        return view('AttendeeEventAgenda', compact(['sessionData', 'roomData', 'channelData', 'event']));
+        $event = DB::table('events')->where('event_slug','=', $slug)->get();
+        $room = DB::table('rooms')->where('event_id','=', $event[0]->id)->get();
+        $channel = DB::table('channels')->where('event_id','=', $event[0]->id)->get();
+        $session = DB::table('sessions')
+//            $attendeeID = DB::table('attendee_register_event')->where('event_id','=', $event[0]->id)->get()
+            ->select('sessions.*', 'channels.channel_name', 'rooms.room_name', 'session_types.type')
+            ->join('rooms', 'sessions.room_id', 'rooms.id')
+            ->join('channels', 'sessions.channel_id', 'channels.id')
+            ->join('session_types', 'sessions.session_type_id', 'session_types.id')
+//                ->join('attendee_register_event', 'sessions.id', 'attendee_register_event.sessions_id')
+            ->where('sessions.event_id','=', $event[0]->id)
+            ->get();
+
+
+        return view('AttendeeEventAgenda', compact(['session', 'room', 'channel', 'event']));
     }
 //    public function eventAgenda($slug){
 //        $getEventIdBySlug = DB::table('events')->select('id')->where('event_slug','=', $slug)->get();

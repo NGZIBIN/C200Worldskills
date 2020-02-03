@@ -13,7 +13,7 @@
     <script src="{{ asset('js/app.js') }}" defer></script>
 
     <!-- Styles -->
-    <link href="{{ asset('css/app.css') }}" rel="stylesheet">
+    <link href="{{ asset('css/attendee.css') }}" rel="stylesheet">
     <link href="{{ asset('css/navigation.css') }}" rel="stylesheet">
     <link href="{{ asset('css/main.css') }}" rel="stylesheet">
     <link href="{{ asset('css/bootstrap.min.css') }}" rel="stylesheet">
@@ -26,7 +26,42 @@
 
     <!-- Styles -->
     <link href="{{ asset('css/app.css') }}" rel="stylesheet">
+
+
 </head>
+<script>
+    $(document).ready(function() {
+        var ticket = 0;
+        var total = 0;
+        var ticket_name = "";
+        $("#btnSubmit").prop('disabled', true);
+        // if ($ticket=>ticket_left <= 0){
+        //
+        // }
+        $("h6 [type=checkbox]").change(function() {
+            ticket = 0;
+            $("h6 [type=checkbox]:checked").each(function() {
+                var int = $(this).val();
+                var hiddenValue = parseInt($("#"+int).val());
+                $("#btnSubmit").prop('disabled', false);
+                ticket += hiddenValue;
+                // ticket_name += $("#"+int).attr("name")+" ";
+            });
+            $("#ticketName").html(ticket);
+            $("#totalCost").html(ticket);
+        });
+        $("[name=session]").change(function () {
+            var sessionTicket = 0;
+            $("[name=session]:checked").each(function () {
+                var int = parseInt($(this).val());
+                sessionTicket += int;
+            });
+            $("#sessionCost").html(sessionTicket);
+            total = sessionTicket + ticket;
+            $("#totalCost").html(sessionTicket + ticket);
+        });
+    });
+</script>
 <body>
 <div id="app">
     <nav class="navbar navbar-expand-md navbar-light bg-white shadow-sm">

@@ -2,15 +2,16 @@
 
 @section('content')
     <div class="container">
-        @if (session('alertmessage'))
-            <p style="color:green">{{ session('alertmessage') }}
-            </p>
+        @if(session('alertmessage'))
+            <p style="color: green">{{session('alertmessage')}}</p>
         @endif
+            @include('layouts.flash-messages')
         <div class="row justify-content-center">
             <div class="col-md-8">
                 <div class="card">
-                    <div class="card-header">{{ __('Event List') }}</div>
+                    <div class="card-header" style="font-size: x-large">{{ __('Event List') }}</div>
                     <div class="card-body">
+
 
                         <form method="POST" action="{{ route('login') }}">
                             @csrf
