@@ -11,6 +11,8 @@
 
     <!-- Scripts -->
     <script src="{{ asset('js/app.js') }}" defer></script>
+    <script src="{{ asset('js/bootstrap.min.js') }}"></script>
+    <script src="https://www.paypalobjects.com/api/checkout.js"></script>
 
     <!-- Styles -->
     <link href="{{ asset('css/attendee.css') }}" rel="stylesheet">
@@ -35,18 +37,22 @@
         var total = 0;
         var ticket_name = "";
         $("#btnSubmit").prop('disabled', true);
+        $("#btnConfirm").prop('disabled', true);
         // if ($ticket=>ticket_left <= 0){
         //
         // }
-        $("h6 [type=checkbox]").change(function() {
+        $("h6 [type=checkbox]").change(function () {
             ticket = 0;
+            ticket_name = "";
             $("h6 [type=checkbox]:checked").each(function() {
                 var int = $(this).val();
                 var hiddenValue = parseInt($("#"+int).val());
+
                 $("#btnSubmit").prop('disabled', false);
                 ticket += hiddenValue;
-                // ticket_name += $("#"+int).attr("name")+" ";
+                ticket_name += $("#"+int).attr("name")+" ";
             });
+
             $("#ticketName").html(ticket);
             $("#totalCost").html(ticket);
         });
@@ -59,8 +65,74 @@
             $("#sessionCost").html(sessionTicket);
             total = sessionTicket + ticket;
             $("#totalCost").html(sessionTicket + ticket);
+
         });
+        $("#btnSubmit").click(function () {
+            $("[name=itemname]").val(ticket_name);
+            $("[name=itemprice]").val(ticket);
+            $("#item_modal").modal('show');
+
+
+        });
+        paypal.Button.render({
+            env: 'sandbox',
+            client: {
+                sandbox: 'AbObdMqd0OOghYBQcgKpWa_9c_q1TeRyWHjRjj758C5xJFNgQvkvOZWd-5I4SXmfGJP4l5WezwWUUNHK'
+            },
+            commit: true, // Show paypal button
+
+            payment: function (data, actions) {
+                var payment = setupPayment();
+                return actions.payment.create(payment);
+
+            },
+            onApprove: function(data, actions) {
+                    return actions.payment.execute().then(function (response) {
+                        $("#btnConfirm").prop('disabled', false);
+                        var message = "";
+                        message += "Purchase Success!<br/>";
+                        message += "Click the confirm button to continue";
+                        // message += "<a href='http://127.0.0.1:8000/attendee/home/worldskills-conference-2019'>Confirm!</a>"
+                        $("#msg").html(message);
+                        $("#item_modal").modal("hide");
+                    });
+                }
+
+        }, '#paypal-button');
     });
+    function setupPayment() {
+        ticket = 0;
+        ticket_name = "";
+        $("h6 [type=checkbox]:checked").each(function() {
+            var int = $(this).val();
+            var hiddenValue = parseInt($("#"+int).val());
+            $("#btnSubmit").prop('disabled', false);
+            ticket += hiddenValue;
+            ticket_name += $("#"+int).attr("name")+" ";
+        });
+        var currency = "SGD";
+        var total = 0;
+        var itemList = [];
+        var itemName = ticket_name;
+        var itemPrice = ticket;
+
+
+        var item = {name: itemName, description: "", quantity: 1, price: itemPrice, currency: currency};
+        itemList[itemList.length] = item;
+        total = parseFloat(ticket);
+        var payment = {
+            payment: {
+                transactions: [
+                    {
+                        amount: {total: total, currency: currency},
+                        item_list: {items: itemList}
+                    }
+                ]
+            }
+        }
+        return payment;
+    }
+
 </script>
 <body>
 <div id="app">
@@ -117,6 +189,5 @@
 </body>
 
 <!-- Scripts -->
-<script src="{{ asset('js/app.js') }}"></script>
-<script src="{{ asset('js/bootstrap.min.js') }}"></script>
+
 </html>

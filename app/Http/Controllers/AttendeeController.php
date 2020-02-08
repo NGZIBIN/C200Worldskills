@@ -9,10 +9,114 @@ use App\Organizer;
 use App\Session;
 use App\Channel;
 use App\Room;
+use Illuminate\Support\Facades\Redirect;
+use PayPal\Api\Amount;
+use PayPal\Api\Details;
+use PayPal\Api\Item;
+use PayPal\Api\ItemList;
+use PayPal\Api\Payer;
+use PayPal\Api\Payment;
+use PayPal\Api\PaymentExecution;
+use PayPal\Api\RedirectUrls;
+use PayPal\Api\Transaction;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
+use PayPal\Auth\OAuthTokenCredential;
+use PayPal\Rest\ApiContext;
+use Symfony\Component\Console\Input\Input;
+
 class AttendeeController extends Controller
 {
+    private $_api_context;
+    public function __construct()
+    {
+        $paypal_conf = \Config::get('paypal');
+        $this->_api_context = new ApiContext(new OAuthTokenCredential(
+            $paypal_conf['client_id'],
+            $paypal_conf['secret']
+        ));
+        $this->_api_context->setConfig($paypal_conf['settings']);
+    }
+    public function payWithpaypal(Request $request, $slug){
+        $payer = new Payer();
+        $payer->setPaymentMethod("paypal");
+
+        $item1 = new Item();
+        $item1->setName('Item1')
+            ->setCurrency('USD')
+            ->setQuantity(1)
+            ->setPrice($request -> get('totalCost'));
+
+        $itemList = new ItemList();
+        $itemList->setItems(array($item1));
+
+        $amount = new Amount();
+        $amount->setCurrency("USD")
+            ->setTotal($request -> get('totalCost'));
+
+
+        $transaction = new Transaction();
+        $transaction->setAmount($amount)
+            ->setItemList($itemList)
+            ->setDescription("Payment");
+
+
+        $baseUrl = getBaseUrl();
+        $redirectUrls = new RedirectUrls();
+        $redirectUrls->setReturnUrl("/attendee/home")
+            ->setCancelUrl("/attendee/event_register/".$slug);
+
+        $payment = new Payment();
+        $payment->setIntent("sale")
+            ->setPayer($payer)
+            ->setRedirectUrls($redirectUrls)
+            ->setTransactions(array($transaction));
+
+        $request = clone $payment;
+
+        try {
+            $payment->create($this->_api_context);
+        } catch (\PayPal\Exception\PayPalConnectionException $ex) {
+           if(\Config::get('app.debug')){
+               \Session::put('error', 'Connection timeout');
+               return Redirect::to('/attendee/event_register/'.$slug);
+           }else{
+               \Session::put('error', 'Some error occur, sorry for inconvenient');
+               return Redirect::to('/attendee/event_register/'.$slug);
+           }
+        }
+        foreach ($payment->getLinks() as $link){
+            if($link->getRel() == 'approval_url'){
+                $redirect_url = $link->getHref();
+                break;
+            }
+        }
+        Session::put('paypal_payment_id', $payment->getId());
+        if(isset($redirect_url)){
+            return Redirect::away($redirect_url);
+        }
+        }
+        public function getPaymentStatus($slug){
+        $payment_id = Session::get('paypal_payment_id');
+        Session::forget('paypal_payment_id');
+        if(empty(Input::get('PaterID')) || empty(Input::get('token'))){
+            \Session::put('error', 'Payment failed');
+            return Redirect::to('/attendee/event_register/'.$slug);
+        }
+        $payment = Payment::get($payment_id, $this->_api_context);
+        $execution = new PaymentExecution();
+        $execution->setPayerId(Input::get('PayerID'));
+
+        $result = $payment->execute($execution, $this->_api_context);
+        if($result->getState() == 'approved'){
+            \Session::put('success', 'Payment success');
+            return Redirect::to('/attendee/home');
+        }
+        \Session::put('error', 'Payment Failed');
+        return Redirect::to('/attendee/event_register/'.$slug);
+        }
+
+
     public function dashboard()
     {
         $list = DB::table('organizers')
@@ -20,8 +124,7 @@ class AttendeeController extends Controller
             ->join('events', 'organizers.id', 'events.organizer_id')
             ->get();
 
-        $data = $list;
-        return view('AttendeeDashBoard')->with(['event_name' => $data,'event_date' => $data, 'name' => $data]);
+        return view('AttendeeDashBoard',compact('list'));
 
     }
 
@@ -45,24 +148,12 @@ class AttendeeController extends Controller
         $findTicketByEvent = DB::table('tickets')->where('event_id', '=', $findEventBySlug[0]->id)->get();
         $findTicketsLeftByEvent = DB::table('tickets')->where([['tickets_left', '>', 0],['event_id', '=', $findEventBySlug[0]->id]])->get();
 
-        return view('AttendeeEventRegistration', compact(['slug','eventName','findSessionByEvent','findTicketByEvent','findTicketsLeftByEvent']));
+        return view('AttendeeEventRegistration', compact(['slug','eventName','findSessionByEvent','findTicketByEvent','findTicketsLeftByEvent', 'findEventBySlug']));
 
     }
     public function update(Request $request, $slug)
     {
-//        $validator = Validator::make($request->all(), [
-//            'ticketCostCB[]'=>'required_without_all'
-//        ]);
-//        if($validator->fails()){
-//            return redirect('attendee/event_register/'.$slug)
-//                ->withErrors($validator)
-//                ->withInput();
-//        }
-
-//            if(count($request->ticketCostCB) === 0){
-//                $result = "Please select a ticket to purchase";
-//                return redirect('/attendee/event_register'.$slug)->with('alertmessage', $result);
-//            }else
+//
  {
                  $result = "";
                 $getEventIdBySlug = DB::table('events')->where('event_slug', '=', $slug)->get();
@@ -73,20 +164,13 @@ class AttendeeController extends Controller
                     $tl = $ticketLeft[0]->tickets_left - 1;
                     DB::table('tickets')->where('id', '=', (int)$t)->update(['tickets_left' => $tl]);
                 }
-                $result = "Purchase success!";
+
+                $result = "Congrats you have successfully registered!";
                 return redirect('/attendee/home')->with('alertmessage', $result);
+//            return response()->json(['success'=>true,'url'=> route('/attendee/home')]);
             }
 
 
-
-
-//        if ($this->update($slug) === true) {
-//            $result = "Purchase Successful";
-//            return redirect('/attendee/home')->with('alertmessage', $result);
-//        } else {
-//            $result = "Sorry Purchase Fail";
-//            return redirect('attendee/event_register' . $slug)->with('alertmessage', $result);
-//        }
     }
 
 

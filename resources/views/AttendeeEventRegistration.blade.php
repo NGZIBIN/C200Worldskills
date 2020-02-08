@@ -1,16 +1,23 @@
+
 @extends('layouts.attendeeApp')
 
 @section('content')
     <div class="panel-heading">
 
-        <h2 class="mt-3 mb-3">{{$eventName}}</h2>
+        <h2 class="mt-3 mb-3" id="event_name">{{$eventName}}</h2>
+        <div id="msg" style="color: green"></div>
+        <div id="redirect"></div>
         <hr/>
-        {!! Form::open(['method'=>'POST','action'=>['AttendeeController@update', $slug]]) !!}
-        @csrf
+        {{--        <div class="container">--}}
+        {{--            @if($message = \App\Session::get('success'))--}}
+        {{--                <div class=""--}}
 
+        {!! Form::open(['method'=>'POST', 'id' => 'form','action'=>['AttendeeController@update', $slug]]) !!}
+        @csrf
         <div class="grid-container-events">
             <div class="row">
                 <div class="col-8 mb-5" style="display: flex">
+
 
                     <div class="grid-container-events">
                         @if(count($findTicketsLeftByEvent) < 1)
@@ -57,15 +64,56 @@
                 <div class="col-4 form-group">
                     <div class="float-right align-content-around">
                         <label>Event Ticket:</label><div id="ticketName"></div>
+
                         Additional Workshops:<div id="sessionCost"></div> <br>
                         <hr>
                         Total: <div id="totalCost"></div>
                         <input type="hidden" name="_token" value="{{ csrf_token() }}" />
-                        <input class=" float-right btn btn-block btn-primary" type="submit"  id="btnSubmit" value="Purchase"/>
+                        <input class=" float-right btn btn-block btn-primary"   id="btnSubmit" value="Purchase"/>
+                        <input class=" float-right btn btn-block btn-primary" type="submit"  id="btnConfirm" value="Confirm"/>
+
                     </div>
                 </div>
             </div>
         </div>
+
+
+        @csrf
+        <div class="modal fade" id="item_modal" role="dialog">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3 class="modal-title">Ticket Details</h3>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="form-body">
+                            <div class="form-group">
+                                <label>Ticket Name</label>
+                                <input name="itemname"  class="form-control" type="text" readonly>
+                            </div>
+                            <div class="form-group">
+                                <label>Item Price</label>
+                                <div class="input-group mb-3">
+                                    <div class="input-group-prepend">
+                                        <span class="input-group-text" id="basic-addon1">SGD</span>
+                                    </div>
+                                    <input name="itemprice" class="form-control" type="text" readonly>
+                                </div>
+
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <div type="submit" id="paypal-button"></div>
+
+                        </div>
+                    </div><!-- /.modal-body -->
+                </div><!-- /.modal-content -->
+            </div><!-- /.modal-dialog -->
+        </div><!-- /.modal -->
+        <!-- End Bootstrap modal -->
+
     </div>
+
     {!! Form::close() !!}
 @endsection
